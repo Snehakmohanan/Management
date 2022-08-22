@@ -34,8 +34,10 @@ namespace Librarymanagement.Models
                 cmd.Parameters.AddWithValue("@Name", usobj.Name);
                 cmd.Parameters.AddWithValue("@Username", usobj.Username);
                 cmd.Parameters.AddWithValue("@Password", usobj.EncryptPassword);
-                // cmd.Parameters.AddWithValue("@CreateDate", usobj.CreateDate);
                 cmd.Parameters.AddWithValue("@Status", usobj.Status);
+                // cmd.Parameters.AddWithValue("@CreateDate", usobj.CreateDate);
+                // cmd.Parameters.AddWithValue("@Token",logobj.Token);
+                
                 int i = cmd.ExecuteNonQuery();
                 if (i > 0)
                 {
@@ -73,6 +75,7 @@ namespace Librarymanagement.Models
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@Username", logobj.Username);
                 cmd.Parameters.AddWithValue("@Password", logobj.EncryptPassword);
+                cmd.Parameters.AddWithValue("@Token",logobj.Token);
                 SqlDataAdapter da = new SqlDataAdapter(cmd);
                 da.Fill(dt);
 
@@ -99,6 +102,47 @@ namespace Librarymanagement.Models
 
         }
 
+
+
+//--------------------------------------------------------------------------------------
+
+        public string  Tokenvalidation(string Token)
+        {
+            string msg = string.Empty;
+            try
+            {
+                con.Open();
+                SqlCommand cmd = new SqlCommand("SP_JWTToken", con);
+                cmd.CommandType = CommandType.StoredProcedure;
+                
+                cmd.Parameters.AddWithValue("@Token",Token);
+                SqlDataAdapter da = new SqlDataAdapter(cmd);
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+
+                if (dt.Rows.Count > 0)
+                {
+                    msg = "Token is Valid";
+                }
+                else
+                {
+                    msg = "Token is not valid";
+                }
+            }
+            catch (Exception ex)
+            {
+                msg = ex.Message;
+            }
+            finally
+            {        
+                con.Close();
+
+            }
+
+            return msg;
+
+        }
+
         //--------------//Get Book Details by ID------------------------------------------------------------------------------------
         
         
@@ -110,13 +154,11 @@ namespace Librarymanagement.Models
                 con.Open();
                 SqlCommand cmd = new SqlCommand("SPLibrarySearchBook", con);
                 cmd.CommandType = CommandType.StoredProcedure;
-                // cmd.Parameters.AddWithValue("@Book_Id", id);
-
                 cmd.Parameters.AddWithValue("@Book_Id", bukobj.Book_Id);
                 SqlDataAdapter da = new SqlDataAdapter(cmd);
                 DataTable dt = new DataTable();
                 da.Fill(dt);
-                // msg = "SUCCESS";
+                
                 con.Close();
                 return dt;
 

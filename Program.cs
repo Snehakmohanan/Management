@@ -28,8 +28,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 });
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen();
+//services cors
+ builder.Services.AddCors(p => p.AddPolicy("corspolicy", builder =>
+    {
+        builder.WithOrigins("*").AllowAnyMethod().AllowAnyHeader();
+    }));
 builder.Services.AddHealthChecks();
 builder.Services.AddMvc();
 var app = builder.Build();
@@ -40,17 +47,22 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+ //app cors
+        app.UseCors("corspolicy");
+       
+        app.UseHttpsRedirection();
+         app.UseAuthentication();
 
-app.UseHttpsRedirection();
+        app.UseAuthorization();
 
-app.UseAuthentication();
+      
+ 
+        app.MapControllers();
 
-  
-app.MapControllers();
-app.UseApiResponseAndExceptionWrapper(
-    new AutoWrapperOptions
-    {
+       
+       
+       app.UseApiResponseAndExceptionWrapper(
+    new AutoWrapperOptions {
         UseCustomSchema = true
-    });
-
-app.Run();
+});
+        app.Run();
