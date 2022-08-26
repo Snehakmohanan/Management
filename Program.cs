@@ -11,6 +11,8 @@ using System.Text;
 
 // Add services to the container.
 
+//JWT Token
+
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
@@ -32,6 +34,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen();
+
 //services cors
  builder.Services.AddCors(p => p.AddPolicy("corspolicy", builder =>
     {
@@ -47,22 +50,30 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
- //app cors
+        //app cors
         app.UseCors("corspolicy");
+
+         app.UseApiResponseAndExceptionWrapper
+       (
+        new AutoWrapperOptions 
+        {
+        UseCustomSchema = true,
+        IgnoreNullValue=false
+        }
+       );
+
        
         app.UseHttpsRedirection();
-         app.UseAuthentication();
 
-        app.UseAuthorization();
+         app.UseAuthentication(); //first 
 
-      
- 
+        app.UseAuthorization();//Second
+
         app.MapControllers();
 
-       
-       
-       app.UseApiResponseAndExceptionWrapper(
-    new AutoWrapperOptions {
-        UseCustomSchema = true
-});
         app.Run();
+       
+       
+      
+
+        

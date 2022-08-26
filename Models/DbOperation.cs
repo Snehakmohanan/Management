@@ -14,6 +14,14 @@ namespace Librarymanagement.Models
         Book bukobj = new Book();
         Encrypter enobj = new Encrypter();
 
+        Author Aobj=new Author();
+
+        Languagee Lobj=new Languagee();
+
+        Publisher Pobj=new Publisher();
+        GetBook Gtobj=new GetBook();
+    
+
         //SqlConnection con = new SqlConnection("Data Source=192.168.12.11;Initial Catalog=LibrarySystemSneha;USER ID=hrconnect;password=mm123");
         SqlConnection con = new SqlConnection("Data Source=MMFL-CO250\\SQLEXPRESS;Initial Catalog=LibrarySystemSnehaa;Integrated Security=True");
 
@@ -104,7 +112,7 @@ namespace Librarymanagement.Models
 
 
 
-//--------------------------------------------------------------------------------------
+//-----------------------------TOKEN VALIDATION---------------------------------------------------------
 
         public string  Tokenvalidation(string Token)
         {
@@ -143,10 +151,61 @@ namespace Librarymanagement.Models
 
         }
 
+       //----------------//ADD-BOOK--------------------------------------------------------------------------------------------------
+
+         
+         public string AddBookDetails(Book bukobj)
+           {
+            string msg = string.Empty;
+             
+            try
+            {
+                con.Open();
+                SqlCommand cmd = new SqlCommand("SP_AddBook", con);
+                cmd.CommandType = CommandType.StoredProcedure;
+                
+                cmd.Parameters.AddWithValue("@BookName", bukobj.BookName);
+                cmd.Parameters.AddWithValue("@Language", bukobj.Language);
+                cmd.Parameters.AddWithValue("@MRP", bukobj.MRP);
+                cmd.Parameters.AddWithValue("@Publisher_Id", bukobj.Publisher_id);
+                cmd.Parameters.AddWithValue("@Published_Date", bukobj.Published_Date);
+                cmd.Parameters.AddWithValue("@Volume", bukobj.Volume);
+                cmd.Parameters.AddWithValue("@status", bukobj.Status);
+                cmd.Parameters.AddWithValue("@Author_Id ", bukobj.Author_Id );
+                int i = cmd.ExecuteNonQuery();
+                if (i > 0)
+                {
+                    msg = "Book Added Successfully";
+
+                    //  Console.WriteLine(msg);
+                }
+                else if (i <= 0)
+                {
+                    msg = "Book not Added";
+                }
+
+            }
+            catch (Exception ex)
+            {
+                msg = ex.Message;
+            }
+            finally
+            {
+                if (con.State == ConnectionState.Open)
+                {
+                    con.Close();
+                }
+
+            }
+            return msg;
+        }
+
+
+
         //--------------//Get Book Details by ID------------------------------------------------------------------------------------
         
         
-        public DataTable GetBookDetails(Book bukobj, out string msg)
+        public DataTable GetBookDetails(GetBook Gtobj, out string msg)
         {
             msg = string.Empty;
             try
@@ -154,7 +213,7 @@ namespace Librarymanagement.Models
                 con.Open();
                 SqlCommand cmd = new SqlCommand("SPLibrarySearchBook", con);
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@Book_Id", bukobj.Book_Id);
+                cmd.Parameters.AddWithValue("@Book_Id", Gtobj.Book_Id);
                 SqlDataAdapter da = new SqlDataAdapter(cmd);
                 DataTable dt = new DataTable();
                 da.Fill(dt);
@@ -177,10 +236,10 @@ namespace Librarymanagement.Models
             return dt;
         }
 
-        //------------------------ // BOOK VIEW---------------------------------------------------------------------------
+        //------------------------ BOOK VIEW---------------------------------------------------------------------------
        
 
-        public DataTable GetBookView(out string msg)
+        public DataTable GetBookView(out string msg,int pgno,int pgsize)
         {
             msg = string.Empty;
             try
@@ -188,11 +247,15 @@ namespace Librarymanagement.Models
                 con.Open();
                 SqlCommand cmd = new SqlCommand("SP_LibraryViewBook", con);
                 cmd.CommandType = CommandType.StoredProcedure;
+                Console.WriteLine(pgno);
+                cmd.Parameters.AddWithValue("@PageNo", pgno);
+                cmd.Parameters.AddWithValue("@PageSize ", pgsize);
                 SqlDataAdapter da = new SqlDataAdapter(cmd);
                 DataTable dt = new DataTable();
                 da.Fill(dt);
 
                 con.Close();
+
                 return dt;
             }
             catch (Exception ex)
@@ -215,10 +278,12 @@ namespace Librarymanagement.Models
         public string UpdateBookDetails(Book bukobj)
         {
             string msg = string.Empty;
+            
+             
             try
             {
                 con.Open();
-                SqlCommand cmd = new SqlCommand("[SP_UpdateBook]", con);
+                SqlCommand cmd = new SqlCommand("SP_UpdateBook", con);
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@Book_Id", bukobj.Book_Id);
                 cmd.Parameters.AddWithValue("@BookName", bukobj.BookName);
@@ -233,6 +298,7 @@ namespace Librarymanagement.Models
                 if (i > 0)
                 {
                     msg = "Book Updated Successfully";
+                     Console.WriteLine(msg);
                 }
                 else if (i <= 0)
                 {
@@ -240,19 +306,19 @@ namespace Librarymanagement.Models
                 }
 
             }
-            catch (Exception ex)
-            {
+              catch (Exception ex)
+              {
                 msg = ex.Message;
-            }
-            finally
-            {
+              }
+             finally
+             {
                 if (con.State == ConnectionState.Open)
                 {
                     con.Close();
                 }
 
-            }
-            return msg;
+             }
+             return msg;
         }
 
         //------------------ //BOOK DELETE-----------------------------------------------------------------------------------
@@ -290,6 +356,97 @@ namespace Librarymanagement.Models
 
             }
             return msg;
+        }
+//--------------------------------GetAuthors-------------------------------------------------------------------
+  
+    
+  
+
+
+         public DataTable GetAuthors(Author Aobj,out string msg)
+        {
+            msg = string.Empty;
+            try
+            {
+                con.Open();
+                SqlCommand cmd = new SqlCommand("SP_ViewAuthors", con);
+                cmd.CommandType = CommandType.StoredProcedure;
+                SqlDataAdapter da = new SqlDataAdapter(cmd);
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+
+                con.Close();
+                return dt;
+            }
+            catch (Exception ex)
+            {
+                msg = ex.Message;
+            }
+            finally
+            {
+                con.Close();
+
+            }
+
+            return dt;
+        }
+
+//--------------------------------GetLanguage-------------------------------------------------------------------
+          public DataTable GetLanguage(Languagee Lobj,out string msg)
+        {
+            msg = string.Empty;
+            try
+            {
+                con.Open();
+                SqlCommand cmd = new SqlCommand("SP_ViewLanguage", con);
+                cmd.CommandType = CommandType.StoredProcedure;
+                SqlDataAdapter da = new SqlDataAdapter(cmd);
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+
+                con.Close();
+                return dt;
+            }
+            catch (Exception ex)
+            {
+                msg = ex.Message;
+            }
+            finally
+            {
+                con.Close();
+
+            }
+
+            return dt;
+        }
+
+//--------------------------------GetPublisher-------------------------------------------------------------------
+       public DataTable GetPublisher(Publisher Pobj,out string msg)
+        {
+            msg = string.Empty;
+            try
+            {
+                con.Open();
+                SqlCommand cmd = new SqlCommand("SP_ViewPublisher", con);
+                cmd.CommandType = CommandType.StoredProcedure;
+                SqlDataAdapter da = new SqlDataAdapter(cmd);
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+
+                con.Close();
+                return dt;
+            }
+            catch (Exception ex)
+            {
+                msg = ex.Message;
+            }
+            finally
+            {
+                con.Close();
+
+            }
+
+            return dt;
         }
 
     }
