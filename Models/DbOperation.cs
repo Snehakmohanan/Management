@@ -1,9 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Librarymanagement.Models
 {
@@ -13,11 +9,9 @@ namespace Librarymanagement.Models
         login logobj=new login();
         Book bukobj = new Book();
         Encrypter enobj = new Encrypter();
-
+        DataTable dt1 = new DataTable();
         Author Aobj=new Author();
-
         Languagee Lobj=new Languagee();
-
         Publisher Pobj=new Publisher();
         GetBook Gtobj=new GetBook();
     
@@ -43,9 +37,6 @@ namespace Librarymanagement.Models
                 cmd.Parameters.AddWithValue("@Username", usobj.Username);
                 cmd.Parameters.AddWithValue("@Password", usobj.EncryptPassword);
                 cmd.Parameters.AddWithValue("@Status", usobj.Status);
-                // cmd.Parameters.AddWithValue("@CreateDate", usobj.CreateDate);
-                // cmd.Parameters.AddWithValue("@Token",logobj.Token);
-                
                 int i = cmd.ExecuteNonQuery();
                 if (i > 0)
                 {
@@ -86,7 +77,7 @@ namespace Librarymanagement.Models
                 cmd.Parameters.AddWithValue("@Token",logobj.Token);
                 SqlDataAdapter da = new SqlDataAdapter(cmd);
                 da.Fill(dt);
-
+//DA CLEAR
                 if (dt.Rows.Count == 0)
                 {
                     msg = "Login Failed";
@@ -112,8 +103,8 @@ namespace Librarymanagement.Models
 
 
 
-//-----------------------------TOKEN VALIDATION---------------------------------------------------------
-
+//-----------------------------TOKEN VALIDATION 1---------------------------------------------------------
+//Using String
         public string  Tokenvalidation(string Token)
         {
             string msg = string.Empty;
@@ -150,6 +141,41 @@ namespace Librarymanagement.Models
             return msg;
 
         }
+
+
+   //-----------------------------TOKEN VALIDATION 2---------------------------------------------------------
+   //Using DataTable
+        
+        public DataTable  Tokenvalidation1(string Token)
+        {
+            string msg = string.Empty;
+            try
+            {
+                con.Open();
+                SqlCommand cmd = new SqlCommand("SP_JWTToken", con);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@Token",Token);
+                Console.WriteLine(Token);
+                SqlDataAdapter da = new SqlDataAdapter(cmd);
+                DataTable dt1 = new DataTable();
+                da.Fill(dt1);
+                return dt1;
+            }
+               
+            catch (Exception ex)
+            {
+                msg = ex.Message;
+            }
+            finally
+            {        
+                con.Close();
+
+            }
+
+            return dt1;
+
+            }
+
 
        //----------------//ADD-BOOK--------------------------------------------------------------------------------------------------
 
@@ -272,10 +298,58 @@ namespace Librarymanagement.Models
         }
 
         //----------------- // UPDATE BOOK-----------------------------------------------------------------------------
-       
+       //Using String
 
 
         public string UpdateBookDetails(Book bukobj)
+        {
+            string msg = string.Empty;
+            
+             
+            try
+            {
+                con.Open();
+                SqlCommand cmd = new SqlCommand("SP_UpdateBook", con);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@Book_Id", bukobj.Book_Id);
+                cmd.Parameters.AddWithValue("@BookName", bukobj.BookName);
+                cmd.Parameters.AddWithValue("@Language", bukobj.Language);
+                cmd.Parameters.AddWithValue("@MRP", bukobj.MRP);
+                cmd.Parameters.AddWithValue("@Publisher_Id", bukobj.Publisher_id);
+                cmd.Parameters.AddWithValue("@Published_Date", bukobj.Published_Date);
+                cmd.Parameters.AddWithValue("@Volume", bukobj.Volume);
+                cmd.Parameters.AddWithValue("@status", bukobj.Status);
+                cmd.Parameters.AddWithValue("@Author_Id", bukobj.Author_Id);
+                int i = cmd.ExecuteNonQuery();
+                if (i > 0)
+                {
+                    msg = "Book Updated Successfully";
+                     Console.WriteLine(msg);
+                }
+                else if (i <= 0)
+                {
+                    msg = "This is an Invalid Id";
+                }
+
+            }
+              catch (Exception ex)
+              {
+                msg = ex.Message;
+              }
+             finally
+             {
+                if (con.State == ConnectionState.Open)
+                {
+                    con.Close();
+                }
+
+             }
+             return msg;
+        }
+        //----------------- // UPDATE BOOK-----------------------------------------------------------------------------
+       //Using DataTable
+
+         public DataTable UpdateBookDetails1(Book bukobj)
         {
             string msg = string.Empty;
             
@@ -318,8 +392,9 @@ namespace Librarymanagement.Models
                 }
 
              }
-             return msg;
+             return dt;
         }
+        //========================================================================================================================
 
         //------------------ //BOOK DELETE-----------------------------------------------------------------------------------
        
@@ -329,33 +404,34 @@ namespace Librarymanagement.Models
             try
             {
                 con.Open();
-                SqlCommand cmd = new SqlCommand("[SP_DeleteBook]", con);
+                SqlCommand cmd = new SqlCommand("SP_DeleteBook", con);
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@Book_Id", bukobj.Book_Id);
                 int i = cmd.ExecuteNonQuery();
                 if (i > 0)
                 {
-                    msg = "Data has been Deleted";
+                    msg = "Book Deleted Successfully";
+                     Console.WriteLine(msg);
                 }
                 else if (i <= 0)
                 {
-                    msg = "Process Failed";
+                    msg = "This is an Invalid Id";
                 }
 
             }
-            catch (Exception ex)
-            {
+              catch (Exception ex)
+              {
                 msg = ex.Message;
-            }
-            finally
-            {
+              }
+             finally
+             {
                 if (con.State == ConnectionState.Open)
                 {
                     con.Close();
                 }
 
-            }
-            return msg;
+             }
+             return msg;
         }
 //--------------------------------GetAuthors-------------------------------------------------------------------
   
@@ -448,6 +524,8 @@ namespace Librarymanagement.Models
 
             return dt;
         }
+      
+
 
     }
     }

@@ -1,11 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
 using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using System.ComponentModel.DataAnnotations;
 using Librarymanagement.Models;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -18,8 +12,8 @@ using PaginationFilter;
 namespace Librarymanagement.Controllers
 {
 
-    //[Authorize]
 
+    // [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class LibraryManagement : ControllerBase
@@ -40,11 +34,14 @@ namespace Librarymanagement.Controllers
 
         DataTable dt = new DataTable();
         DataSet ds = new DataSet();
+        
 
        
              public IConfiguration _configuration;
-        
-            public LibraryManagement(IConfiguration config)
+
+        public DateTime Expires { get; private set; }
+
+        public LibraryManagement(IConfiguration config)
            {
             _configuration = config;
 
@@ -78,14 +75,10 @@ namespace Librarymanagement.Controllers
         [AllowAnonymous]
         
         [HttpPost("LoginUser")]
-        
-        public List<login> Post([FromBody] login logobj)
-
+         public List<login> Post([FromBody] login logobj)
         {
-            
             Encrypter encobj = new Encrypter();
             logobj.EncryptPassword = encobj.MD5Hash2(logobj);
-                        
             //create claims details based on the user information
                var claims = new[]
                     {
@@ -96,25 +89,22 @@ namespace Librarymanagement.Controllers
                         new Claim("Password",logobj.EncryptPassword )
                     };
 
+                    Expires=DateTime.Now.AddSeconds(20);
+
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+           
             var signIn = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var token = new JwtSecurityToken(
                 _configuration["Jwt:Issuer"],
                 _configuration["Jwt:Audience"],
                 claims,
-                expires: DateTime.UtcNow.AddMinutes(10),
+                expires: DateTime.UtcNow.AddSeconds(20),
                 signingCredentials: signIn);
 
             var token1=new JwtSecurityTokenHandler().WriteToken(token); //token in token1
-
-          
             logobj.Token=token1; //token pass to field token in the database
-            
             dt = Db.GetLogin(logobj);
-            
-
             List<login> list = new List<login>();
-
             for (int i = 0; i < dt.Rows.Count; i++)
             {
                 try 
@@ -130,8 +120,7 @@ namespace Librarymanagement.Controllers
                 {
                     string msg = ex.Message;
                 }
-                
-            }
+                 }
             return list;
         }
          
@@ -275,7 +264,14 @@ namespace Librarymanagement.Controllers
         {
             var header = (string) HttpContext.Request.Headers["Authorization"];
              var validFilter = new Pagination1(filter.PageNumber, filter.PageSize);
-             
+
+
+
+             var auth = User?.Identity?.IsAuthenticated;
+             Console.WriteLine(auth);
+
+          
+          
             DbOperation DbObj = new DbOperation();
            
             string Tokens=string.Empty;
@@ -296,7 +292,7 @@ namespace Librarymanagement.Controllers
             List<GetBook> list = new List<GetBook>();
 
 
-         if(Tokens==Tokens1)
+         if(Tokens==Tokens1 && auth ==true )
 
         {
 
@@ -337,55 +333,35 @@ namespace Librarymanagement.Controllers
      }
         }
 
-        
-        
-        
-        
-        
-        
+
+//============================================================================================================================================
+
         //-----------------3.UPDATE BOOK DETAILS------------------------------------------------------------
 
-       
+
         [HttpPut("{Book_Id}")]
          public async Task<MyCustomApiResponse> Put(int Book_Id,[FromBody] Book bukobj)
 
         {
-            
-            var header = (string) HttpContext.Request.Headers["Authorization"];
-            Console.WriteLine(header);
-            
-            DbOperation DbObj = new DbOperation();
-            
-            string Tokens=string.Empty;
+             DbOperation DbObj = new DbOperation();
+             string Tokens=string.Empty;
+             var header = (string) HttpContext.Request.Headers["Authorization"];
+             await Task.Delay(1);
+             DataTable dtToken = new DataTable();
+             dtToken=DbObj.Tokenvalidation1(header);
+             string msg = string.Empty;
+              Console.WriteLine("Count");
+            Console.WriteLine(dtToken.Rows.Count);
+             if(dtToken.Rows.Count > 0)
 
-             Console.WriteLine(Tokens);
-             
-            Tokens=DbObj.Tokenvalidation(header);
-
-            Console.WriteLine(Tokens);
-
-            
-            string Tokens1 = "Token is Valid";
-
-           await Task.Delay(1);
-
-
-
-           
-           
-           string msg = string.Empty;
-
-            if(Tokens==Tokens1)
-             {
+            {
                 try
                {
                
-
                bukobj.Book_Id = Book_Id;
                 
                msg = Db.UpdateBookDetails(bukobj);
-               Console.WriteLine(msg);
-
+               
                }
                catch (Exception ex)
               
@@ -393,16 +369,20 @@ namespace Librarymanagement.Controllers
                 msg = ex.Message;
                }
 
-              return new MyCustomApiResponse("Successfully Update Book",200);
+              return new MyCustomApiResponse(msg,200);
              }
             else
 
              {
-               return new MyCustomApiResponse("UnAuthorized",401);
+               return new MyCustomApiResponse("invalid token",401);
              }
 
            
         }
+
+
+
+        //=======================================================================================================
 
 
 
@@ -412,49 +392,48 @@ namespace Librarymanagement.Controllers
         //------------4.DELETE BOOK DETAILS---------------------------------------------------------
 
 
-        [HttpDelete("{Book_id}")]
+        [HttpDelete("{Book_Id}")]
+         public async Task<MyCustomApiResponse> Delete(int Book_Id)
 
-        // public string Delete(int Book_id)
-        public async Task<MyCustomApiResponse> Delete(int Book_id)
         {
-            var header = (string) HttpContext.Request.Headers["Authorization"];
-            DbOperation DbObj = new DbOperation();
-            string Tokens=string.Empty;
-            Tokens=DbObj.Tokenvalidation(header);
+             DbOperation DbObj = new DbOperation();
+             string Tokens=string.Empty;
+             var header = (string) HttpContext.Request.Headers["Authorization"];
+             await Task.Delay(1);
+             DataTable dtToken = new DataTable();
+             dtToken=DbObj.Tokenvalidation1(header);
+             string msg = string.Empty;
+        
+            
+             if(dtToken.Rows.Count > 0)
 
-            Console.WriteLine(header);
-
-
-           string Tokens1 = "Token is Valid";
-           await Task.Delay(1);
-
-
-            string msg = string.Empty;
-           
-
-             if(Tokens==Tokens1)
-             {
-                 try
+            {
+                try
                {
-                Console.WriteLine(Tokens);
-                bukobj.Book_Id = Book_id;
-                msg = Db.DeleteBookDetails(bukobj);
-
+               
+               bukobj.Book_Id = Book_Id;
+                
+               msg = Db.DeleteBookDetails(bukobj);
+               
                }
-              catch (Exception ex)
+               catch (Exception ex)
+              
                {
                 msg = ex.Message;
                }
-              return new MyCustomApiResponse("Successfully Delete Book",200);
-             }
-             else
-             {
-               return new MyCustomApiResponse("UnAuthorized",401);
-             }
 
+              return new MyCustomApiResponse(msg,200);
+             }
+            else
+
+             {
+               return new MyCustomApiResponse("invalid token",401);
+             }
 
            
         }
+
+
 
 //---------------------------------------AuthorsName----------------------
 
@@ -677,9 +656,26 @@ namespace Librarymanagement.Controllers
 
 
 
-
 //===================================================================================================================
-
+//===================================================================================================================
+// using Microsoft.AspNetCore.Mvc;
+// using System;
+// using System.Collections.Generic;
+// using System.Data;
+// using System.Linq;
+// using System.Threading.Tasks;
+// using Microsoft.AspNetCore.Http;
+// using System.ComponentModel.DataAnnotations;
+// using Librarymanagement.Models;
+// using Microsoft.IdentityModel.Tokens;
+// using System.IdentityModel.Tokens.Jwt;
+// using System.Text;
+// using System.Security.Claims;
+// using Microsoft.AspNetCore.Authorization;
+// using MyCustomApiResponses;
+// using PaginationFilter;
+// using System.Data.SqlClient;
+// using Dapper;
 
 
 //-----------------------VIEW BOOK------------------------------------------------------------
@@ -693,9 +689,6 @@ namespace Librarymanagement.Controllers
 //             string Tokens=string.Empty;
            
 //             Tokens=DbObj.Tokenvalidation(header);
-
-
-
 
 //             DataTable dt = new DataTable();
 //             string msg = string.Empty;
@@ -891,6 +884,157 @@ namespace Librarymanagement.Controllers
 //          return new MyCustomApiResponse(list,"UnAuthorized",401);
 //      }
 //         }
+
+//=============================old=====================================================
+       
+        // [HttpPut("{Book_Id}")]
+        //  public async Task<MyCustomApiResponse> Put(int Book_Id,[FromBody] Book bukobj)
+
+        // {
+            
+        //     var header = (string) HttpContext.Request.Headers["Authorization"];
+        //     Console.WriteLine(header);
+            
+        //     DbOperation DbObj = new DbOperation();
+            
+        //     string Tokens=string.Empty;
+
+        //      Console.WriteLine(Tokens);
+             
+        //     Tokens=DbObj.Tokenvalidation(header);
+
+        //     Console.WriteLine(Tokens);
+
+            
+        //     string Tokens1 = "Token is Valid";
+
+        //    await Task.Delay(1);      
+        //    string msg = string.Empty;
+
+        //     if(Tokens==Tokens1)
+        //      {
+        //         try
+        //        {
+               
+
+        //        bukobj.Book_Id = Book_Id;
+                
+        //        msg = Db.UpdateBookDetails(bukobj);
+        //        Console.WriteLine(msg);
+
+        //        }
+        //        catch (Exception ex)
+              
+        //        {
+        //         msg = ex.Message;
+        //        }
+
+        //       return new MyCustomApiResponse("Successfully Update Book",200);
+        //      }
+        //     else
+
+        //      {
+        //        return new MyCustomApiResponse("UnAuthorized",401);
+        //      }
+
+   //-----------------------------------------------------------------------------------        
+        // }
+        // [HttpDelete("{Book_id}")]
+
+        
+        // public async Task<MyCustomApiResponse> Delete(int Book_id)
+        // {
+        //     var header = (string) HttpContext.Request.Headers["Authorization"];
+        //     DbOperation DbObj = new DbOperation();
+        //     string Tokens=string.Empty;
+        //     Tokens=DbObj.Tokenvalidation(header);
+
+        //     Console.WriteLine(header);
+
+
+        //    string Tokens1 = "Token is Valid";
+        //    await Task.Delay(1);
+
+
+        //     string msg = string.Empty;
+           
+
+        //      if(Tokens==Tokens1)
+        //      {
+        //          try
+        //        {
+        //         Console.WriteLine(Tokens);
+        //         bukobj.Book_Id = Book_id;
+        //         msg = Db.DeleteBookDetails(bukobj);
+
+        //        }
+        //       catch (Exception ex)
+        //        {
+        //         msg = ex.Message;
+        //        }
+        //       return new MyCustomApiResponse("Successfully Delete Book",200);
+        //      }
+        //      else
+        //      {
+        //        return new MyCustomApiResponse("UnAuthorized",401);
+        //      }
+
+
+           
+        // }
+        
+//===================================DAPPER==============================================================================================  
+//        [HttpGet("Book")] 
+//        public async Task<ActionResult<List<DapperBookDetails>>>Getallbooks()
+//        {
+//          using var connection=new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+//          var Books=await connection.QueryAsync<DapperBookDetails>("Select * from BOOK");
+//          return Ok(Books);
+//        }
+// //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+//          [HttpGet("{Book_Id}")]
+//        public async Task<ActionResult<DapperBookDetails>>GetBook(int Book_Id)
+//        {
+//          using var connection=new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+//          var Books=await connection.QueryFirstAsync<DapperBookDetails>("Select * from BOOK where id=@Id",new {Id=Book_Id});
+//          return Ok(Books);
+//        }
+// //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+//         [HttpPost("BookAdd")] 
+//        public async Task<ActionResult<List<DapperBookDetails>>>Addbooks(DapperBookDetails Dbook)
+//        {
+//          using var connection=new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+//          await connection.ExecuteAsync("insert into BOOK(Title,Language_id,MRP,Publisher_id,Published_Date,Volume,Status)values(@Title,@Language_id,@MRP,@Publisher_id,@Published_Date,@Volume,@Status)",Dbook);
+//          return Ok(await SelectAllBooks(connection));
+//        }
+// //'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+//        [HttpPut("Book_Id")] 
+//        public async Task<ActionResult<List<DapperBookDetails>>>Updatebooks(DapperBookDetails Dbook)
+//        {
+//          using var connection=new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+//          await connection.ExecuteAsync("update BOOK set Title=@Title,Language_id=@Language_id,MRP=@MRP,Publisher_id=@Publisher_id,Published_Date=@Published_Date,Volume=@Volume,Status=@Status where Book_Id=@Book_Id)",Dbook);
+//          return Ok(await SelectAllBooks(connection));
+//        }
+// //'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+//      [HttpDelete("Book_Id")] 
+//        public async Task<ActionResult<List<DapperBookDetails>>>Deletebooks(int Book_Id)
+//        {
+//          using var connection=new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+//          await connection.ExecuteAsync("delete from BOOK where Book_Id=@Book_Id)",new {Id=Book_Id});
+//          return Ok(await SelectAllBooks(connection));
+//        }
+
+// //'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+//         private static async Task<IEnumerable<DapperBookDetails>> SelectAllBooks(SqlConnection connection)
+//         {
+//             return await connection.QueryAsync<DapperBookDetails>("select * from Book");
+//         }
+
+
+
 
         
         

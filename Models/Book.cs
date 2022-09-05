@@ -40,8 +40,7 @@ namespace Librarymanagement.Models
         [Required(ErrorMessage = "The Field {0} is required")]
 
         public int Publisher_id { get; set; } = 0;
-        // public int PageNo { get; set; } = 0;
-        // public int PageSize { get; set; } = 0;
+       
 
     }
 }
