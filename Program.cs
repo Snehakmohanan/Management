@@ -9,12 +9,19 @@ using System.Text;
 
 
 
-// Add services to the container.
-
-//JWT Token
 
 
-var builder = WebApplication.CreateBuilder(args);
+ var builder = WebApplication.CreateBuilder(args);
+
+
+builder.Host.ConfigureLogging(logging =>
+{
+    logging.ClearProviders();
+    logging.AddConsole();
+});
+
+builder.Services.AddRazorPages();
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
     options.RequireHttpsMetadata = false;
@@ -47,6 +54,12 @@ builder.Services.AddMvc();
 
 
 var app = builder.Build();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error");
+    app.UseHsts();
+}
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -69,11 +82,15 @@ if (app.Environment.IsDevelopment())
        
         app.UseHttpsRedirection();
 
+        app.UseStaticFiles();
+
          app.UseAuthentication(); //first 
 
         app.UseAuthorization();//Second
 
         app.MapControllers();
+        
+        app.MapRazorPages();
 
         app.Run();
        
@@ -98,7 +115,7 @@ if (app.Environment.IsDevelopment())
 
 
 
-
+//===================================================================================================================
 
 // using Librarymanagement.Models;
 // using Microsoft.AspNetCore;
@@ -117,6 +134,7 @@ if (app.Environment.IsDevelopment())
 
 
 // var builder = WebApplication.CreateBuilder(args);
+
 // builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 // {
 //     options.RequireHttpsMetadata = false;
@@ -183,3 +201,20 @@ if (app.Environment.IsDevelopment())
       
 
         
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

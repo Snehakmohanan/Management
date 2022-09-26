@@ -30,6 +30,12 @@ namespace Librarymanagement.Models
         public DateTime CreateDate { get; set; }
         [Required(ErrorMessage = "The Field {0} is required")]
         public int Status { get; set; }
+         public DateTime LoginDate { get; set; }
+
+         public int LoginCount { get; set; }
+
+        
+
 
 
 

@@ -8,6 +8,8 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using MyCustomApiResponses;
 using PaginationFilter;
+using System;
+using System.Diagnostics;
 
 namespace Librarymanagement.Controllers
 {
@@ -41,11 +43,27 @@ namespace Librarymanagement.Controllers
 
         public DateTime Expires { get; private set; }
 
-        public LibraryManagement(IConfiguration config)
+        private readonly ILogger<LibraryManagement>logger;
+
+        public LibraryManagement(IConfiguration config,ILogger<LibraryManagement>logger)
            {
             _configuration = config;
+            this.logger = logger;
 
            }
+
+           
+          
+           
+
+           
+        //  private readonly ILogger<LibraryManagement>logger;
+
+        // public LibraryManagement(ILogger<LibraryManagement>logger)
+        // {
+        //     this.logger = logger;
+        // }
+
 
 
     //------------------SIGNUP USERS-----------------------------------------------------------------
@@ -72,21 +90,113 @@ namespace Librarymanagement.Controllers
 
 //------------------LOGIN USERS-----------------------------------------------------------------
 
-        [AllowAnonymous]
-        
-        [HttpPost("LoginUser")]
-         public List<login> Post([FromBody] login logobj)
+         [AllowAnonymous]
+
+         [HttpPost("LoginUser")]
+        public async Task<MyCustomApiResponse> loginPost([FromBody] login logobj) 
         {
+          
+           
+            DataTable dt1= new DataTable();
             Encrypter encobj = new Encrypter();
+            List<login> list1 = new List<login>();
+            // await Task.Delay(1);
             logobj.EncryptPassword = encobj.MD5Hash2(logobj);
-            //create claims details based on the user information
+
+            var token = Authentication(logobj.Username, logobj.EncryptPassword);
+            logobj.Token=token;
+
+             if (token == "Locked")
+            {
+                //Console.WriteLine("tokenLOCKED");
+                return new MyCustomApiResponse(list1, "Account is Locked due to 3 Incorrect password try! Please Contact Admin for Activate account ", 200);
+            }
+            else
+            {
+            dt1= Db.GetLogin(logobj);
+            Console.WriteLine("dt1");
+            
+            if (dt1.Rows.Count > 0)
+             { 
+                      Console.WriteLine("dt1.Rows.Count"); 
+                Console.WriteLine(dt1.Rows.Count); 
+            for (int i = 0; i < dt1.Rows.Count; i++)
+            {
+             try
+                {
+                     Console.WriteLine("dt3");
+                     logobj.LoginId = Convert.ToInt32(dt1.Rows[i]["LoginId"]);
+                   Console.WriteLine(logobj.LoginId);
+                   logobj.Name = dt1.Rows[i]["Name"].ToString();
+                   Console.WriteLine(logobj.Name );
+                   logobj.CreateDate = Convert.ToDateTime(dt1.Rows[i]["CreateDate"]);
+                   logobj.Status = Convert.ToInt32(dt1.Rows[i]["Status"]); 
+                   Console.WriteLine( logobj.Status);
+                list1.Add(logobj); 
+                }
+                  catch (Exception ex)
+                        {
+                            string msg = ex.Message;
+                        }
+             }
+                   return new MyCustomApiResponse(list1, "Valid Customer", 200);
+                }
+                else
+                {
+                    return new MyCustomApiResponse(list1,
+                        "InValid Customer",
+                        200);
+                }  
+
+              
+
+             }
+        }
+               
+        
+        public string Authentication(string Username, string EncryptPassword)//string username, string password
+        {
+             int statuss = 0;
+            string tokenmsg = string.Empty;
+             Console.WriteLine("Username");
+                 Console.WriteLine( Username);
+                    Console.WriteLine( EncryptPassword);
+             dt= Db.LoginBlocked(Username,EncryptPassword);
+              for (int i = 0; i < dt.Rows.Count; i++)
+            {
+                logobj.LoginId = Convert.ToInt32(dt.Rows[i]["LoginId"]);
+                logobj.Username = dt.Rows[i]["Username"].ToString();
+                logobj.Password = dt.Rows[i]["Password"].ToString();
+                logobj.Name = dt.Rows[i]["Name"].ToString();
+                 Console.WriteLine( "authName");
+                  Console.WriteLine( logobj.Name);
+                logobj.Status = Convert.ToInt32(dt.Rows[i]["Status"]);
+                  Console.WriteLine( logobj.Status);
+            }
+             statuss = logobj.Status;
+            if (statuss == 0)
+            {
+                tokenmsg = "Locked";
+                Console.WriteLine(tokenmsg);
+                return tokenmsg;
+            }
+            else
+            {
+                if (!(Username.Equals(logobj.Username) || EncryptPassword.Equals(logobj.Password)))
+                {
+                    tokenmsg = "UserName or Password is Invalid";
+                    return tokenmsg;
+                }
+            }
+
+             //create claims details based on the user information
                var claims = new[]
                     {
                         new Claim(JwtRegisteredClaimNames.Sub, _configuration["Jwt:Subject"]),
                         new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                         new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString()),
-                        new Claim("UserId", logobj.Username),
-                        new Claim("Password",logobj.EncryptPassword )
+                        new Claim("UserId", Username),
+                        new Claim("Password",EncryptPassword )
                     };
 
                     Expires=DateTime.Now.AddSeconds(20);
@@ -101,28 +211,12 @@ namespace Librarymanagement.Controllers
                 expires: DateTime.UtcNow.AddSeconds(20),
                 signingCredentials: signIn);
 
-            var token1=new JwtSecurityTokenHandler().WriteToken(token); //token in token1
-            logobj.Token=token1; //token pass to field token in the database
-            dt = Db.GetLogin(logobj);
-            List<login> list = new List<login>();
-            for (int i = 0; i < dt.Rows.Count; i++)
-            {
-                try 
-                {
-                 logobj.LoginId = Convert.ToInt32(dt.Rows[i]["LoginId"]);
-                logobj.Name = dt.Rows[i]["Name"].ToString();
-                logobj.CreateDate = Convert.ToDateTime(dt.Rows[i]["CreateDate"]);
-                logobj.Status = Convert.ToInt32(dt.Rows[i]["Status"]);
-                logobj.Token=token1?.ToString();
-                list.Add(logobj);
-                }
-                catch (Exception ex)
-                {
-                    string msg = ex.Message;
-                }
-                 }
-            return list;
+            var token1=new JwtSecurityTokenHandler().WriteToken(token);
+            Console.WriteLine(token1);
+            return token1;
         }
+
+
          
      //----------------------ADD BOOK----------------------------------------------------------------
       [HttpPost("AddBook")]
@@ -173,9 +267,16 @@ namespace Librarymanagement.Controllers
 
 
         [HttpGet("{Id}")]
+              
 
-        public async Task<MyCustomApiResponse> Get(int Id)
+          //public async Task<MyCustomApiResponse> Get(int Id)     
+        public ActionResult<MyCustomApiResponse> Get(int Id)   
+
         {
+            logger.LogDebug("get by Id method executing....");
+             
+            DateTime.UtcNow.ToLongTimeString();
+
             var header = (string) HttpContext.Request.Headers["Authorization"];
            
             DbOperation DbObj = new DbOperation();
@@ -189,7 +290,7 @@ namespace Librarymanagement.Controllers
 
             string Tokens1 = "Token is Valid";
 
-            await Task.Delay(1);
+           // await Task.Delay(1);
 
 
            
@@ -206,14 +307,17 @@ namespace Librarymanagement.Controllers
 
         if(Tokens==Tokens1)
         {
+        
 
         if(dt.Rows.Count>0)
+       
+         {
+            
+            for (int i = 0; i < dt.Rows.Count; i++)
            
             {
-           
-             for (int i = 0; i < dt.Rows.Count; i++)
-           
-            {
+               
+
                 Gtobj.Book_Id = Convert.ToInt32(dt.Rows[i]["Book_Id"]); 
                 Gtobj.BookName = dt.Rows[i]["BookName"].ToString();
                 Gtobj.MRP = Convert.ToInt32(dt.Rows[i]["MRP"]);
@@ -226,18 +330,22 @@ namespace Librarymanagement.Controllers
                 Gtobj.Volume = dt.Rows[i]["Volume"].ToString();
                 list.Add(Gtobj);
               
-
+               
             }
             
              return new MyCustomApiResponse(list,"Success",200);
             
             }
-
+            
         else
            {
-                 
-             return new MyCustomApiResponse(list,"Invalid Book ID",200);
+             logger.LogWarning($"Book with  Id {Id} is not found");  
+             logger.LogError("This is an Error");
+           
+             DateTime.UtcNow.ToLongTimeString();
 
+             return new MyCustomApiResponse(list,"Invalid Book ID",200);
+            
             }
 
            }
@@ -262,6 +370,9 @@ namespace Librarymanagement.Controllers
 
         public async Task<MyCustomApiResponse> Get(  [FromQuery] Pagination1 filter )
         {
+          
+          logger.LogInformation("Getting All the Books");
+
             var header = (string) HttpContext.Request.Headers["Authorization"];
              var validFilter = new Pagination1(filter.PageNumber, filter.PageSize);
 
@@ -299,6 +410,7 @@ namespace Librarymanagement.Controllers
             if(dt.Rows.Count>0)
            
             {
+                
 
             for (int i = 0; i < dt.Rows.Count; i++)
             {
@@ -329,7 +441,7 @@ namespace Librarymanagement.Controllers
            }
     else
      {
-         return new MyCustomApiResponse(list,"UnAuthorized",401);
+         return new MyCustomApiResponse(list,"UnAuthorized-Token Expired",401);
      }
         }
 
@@ -416,9 +528,12 @@ namespace Librarymanagement.Controllers
                msg = Db.DeleteBookDetails(bukobj);
                
                }
-               catch (Exception ex)
+               //catch (Exception ex)
+                catch (DivideByZeroException ex)
               
                {
+                
+               
                 msg = ex.Message;
                }
 
@@ -427,6 +542,7 @@ namespace Librarymanagement.Controllers
             else
 
              {
+              
                return new MyCustomApiResponse("invalid token",401);
              }
 
@@ -981,6 +1097,66 @@ namespace Librarymanagement.Controllers
 
 
            
+        // }
+
+        
+  /////////////////////////////////////////////////////
+        
+        // [HttpPost("LoginUser")]
+        //  public List<login> Post([FromBody] login logobj)
+        // {
+        //     Encrypter encobj = new Encrypter();
+        //     logobj.EncryptPassword = encobj.MD5Hash2(logobj);
+
+            
+
+        //     //create claims details based on the user information
+        //        var claims = new[]
+        //             {
+        //                 new Claim(JwtRegisteredClaimNames.Sub, _configuration["Jwt:Subject"]),
+        //                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+        //                 new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString()),
+        //                 new Claim("UserId", logobj.Username),
+        //                 new Claim("Password",logobj.EncryptPassword )
+        //             };
+
+        //             Expires=DateTime.Now.AddSeconds(20);
+
+        //     var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+           
+        //     var signIn = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        //     var token = new JwtSecurityToken(
+        //         _configuration["Jwt:Issuer"],
+        //         _configuration["Jwt:Audience"],
+        //         claims,
+        //         expires: DateTime.UtcNow.AddSeconds(20),
+        //         signingCredentials: signIn);
+
+        //     var token1=new JwtSecurityTokenHandler().WriteToken(token); //token in token1
+        //     logobj.Token=token1; //token pass to field token in the database
+           
+            
+        //     dt = Db.GetLogin(logobj);
+        //     List<login> list = new List<login>();
+        //     for (int i = 0; i < dt.Rows.Count; i++)
+        //     {
+        //         try 
+        //         {
+        //          logobj.LoginId = Convert.ToInt32(dt.Rows[i]["LoginId"]);
+        //         logobj.Name = dt.Rows[i]["Name"].ToString();
+        //         logobj.CreateDate = Convert.ToDateTime(dt.Rows[i]["CreateDate"]);
+        //         logobj.Status = Convert.ToInt32(dt.Rows[i]["Status"]);
+                
+
+        //         logobj.Token=token1?.ToString();
+        //         list.Add(logobj);
+        //         }
+        //         catch (Exception ex)
+        //         {
+        //             string msg = ex.Message;
+        //         }
+        //          }
+        //     return list;
         // }
         
 //===================================DAPPER==============================================================================================  

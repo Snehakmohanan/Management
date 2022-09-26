@@ -12,7 +12,7 @@ namespace Librarymanagement.Models
         public int LoginId { get; set; }
         public string? Name { get; set; } = string.Empty;
         [Required(ErrorMessage = "The Field {0} is required")]
-        public string Username { get; set; } = string.Empty;
+        public string? Username { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "The Field {0} is required")]
         public string? Password { get; set; } = string.Empty;
@@ -21,6 +21,14 @@ namespace Librarymanagement.Models
         
         public int Status { get; set; }
          public String? Token { get; set; } = string.Empty;
+
+        //  public DateTime LoginDate { get; set; }
+
+        //  public int LoginCount { get; set; }
+
+
+
+
         // public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         // {
         //     if (!string.IsNullOrEmpty(Name))

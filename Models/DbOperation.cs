@@ -22,7 +22,7 @@ namespace Librarymanagement.Models
         DataTable dt = new DataTable();
 
 
-        //--------------------LOGIN-----------------------------------------------------------
+        //--------------------CREATE LOGIN-----------------------------------------------------------
         
 
         public string CreateLogin(Lib_Users usobj)
@@ -62,10 +62,11 @@ namespace Librarymanagement.Models
             }
             return msg;
         }
-        //----------------------------------------------------------------------------------------------------
+        //------------------------------------------LOGIN----------------------------------------------------------
         public DataTable  GetLogin(login logobj)
         {
-            string msg = string.Empty;
+            DataTable dt1=new DataTable();
+            
 
             try
             {
@@ -75,21 +76,52 @@ namespace Librarymanagement.Models
                 cmd.Parameters.AddWithValue("@Username", logobj.Username);
                 cmd.Parameters.AddWithValue("@Password", logobj.EncryptPassword);
                 cmd.Parameters.AddWithValue("@Token",logobj.Token);
+                Console.WriteLine("Usernamedb");
+                 Console.WriteLine( logobj.Username);
+                    Console.WriteLine( logobj.EncryptPassword);
+              
+
                 SqlDataAdapter da = new SqlDataAdapter(cmd);
-                da.Fill(dt);
-//DA CLEAR
-                if (dt.Rows.Count == 0)
-                {
-                    msg = "Login Failed";
-                }
-                else
-                {
-                    msg = "login success";
-                }
+                da.Fill(dt1);
+                Console.WriteLine(dt1.Rows.Count);
+
+
             }
             catch (Exception ex)
             {
-                msg = ex.Message;
+               String msg = ex.Message;
+            }
+            finally
+            {
+                con.Close();
+
+            }
+
+            return dt1;
+
+        }
+
+       public DataTable  LoginBlocked(string Username, string EncryptPassword)
+        {
+          
+
+            try
+            {
+                con.Open();
+                SqlCommand cmd = new SqlCommand("SP_LOGINBLOCKED", con);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@Username",Username);
+                
+                cmd.Parameters.AddWithValue("@Password",EncryptPassword);
+    
+                SqlDataAdapter da = new SqlDataAdapter(cmd);
+                da.Fill(dt);
+
+             
+            }
+            catch (Exception ex)
+            {
+               string msg = ex.Message;
             }
             finally
             {
@@ -100,6 +132,56 @@ namespace Librarymanagement.Models
             return dt;
 
         }
+
+
+
+
+
+
+
+        //=====================================
+        // public string  GetLoginsss(login logobj)
+        // {
+        //     string msg = string.Empty;
+
+        //     try
+        //     {
+        //         con.Open();
+        //         SqlCommand cmd = new SqlCommand("SP_LOGINPAGE", con);
+        //         cmd.CommandType = CommandType.StoredProcedure;
+        //         cmd.Parameters.AddWithValue("@Username", logobj.Username);
+        //         cmd.Parameters.AddWithValue("@Password", logobj.EncryptPassword);
+        //         cmd.Parameters.AddWithValue("@Token",logobj.Token);
+               
+              
+
+        //         SqlDataAdapter da = new SqlDataAdapter(cmd);
+        //         da.Fill(dt);
+
+        //         if (dt.Rows.Count == 0)
+        //         {
+        //             msg = "Login Failed";
+        //         }
+        //         else
+        //         {
+        //             msg = "login success";
+        //         }
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         msg = ex.Message;
+        //     }
+        //     finally
+        //     {
+        //         con.Close();
+
+        //     }
+
+        //     return msg;
+
+        // }
+
+
 
 
 
